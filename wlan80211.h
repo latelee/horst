@@ -22,6 +22,7 @@
 
 #include <stdint.h>
 
+// 802.11֡ͷ
 struct wlan_frame {
 	uint16_t	fc;
 	uint16_t	duration;

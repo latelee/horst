@@ -206,6 +206,7 @@ void update_spectrum_durations(void)
 	}
 }
 
+// TODO 这个函数要看看
 static void write_to_file(struct packet_info* p)
 {
 	char buf[40];
@@ -386,11 +387,13 @@ static void local_receive_packet(int fd, unsigned char* buffer, size_t bufsize)
 #endif
 	memset(&p, 0, sizeof(p));
 
+    // 解析包
 	if (!parse_packet(buffer, len, &p)) {
 		DEBUG("parsing failed\n");
 		return;
 	}
 
+    // 处理包
 	handle_packet(&p);
 }
 
@@ -650,6 +653,7 @@ int main(int argc, char** argv)
 	if (conf.serveraddr[0] != '\0')
 		mon = net_open_client_socket(conf.serveraddr, conf.port);
 	else {
+
 		ifctrl_init();
 		ifctrl_iwget_interface_info(conf.ifname);
 
@@ -661,6 +665,10 @@ int main(int argc, char** argv)
 			generate_mon_ifname(mon_ifname, IF_NAMESIZE);
 			if (!ifctrl_iwadd_monitor(conf.ifname, mon_ifname))
 				err(1, "failed to add virtual monitor interface");
+            
+            //printf("INFO: A virtual interface '%s' will be used "
+            //                 "instead of '%s'.", mon_ifname, conf.ifname);
+
 
 			printlog("INFO: A virtual interface '%s' will be used "
 				 "instead of '%s'.", mon_ifname, conf.ifname);
@@ -677,10 +685,12 @@ int main(int argc, char** argv)
 
 		/* get info again, as chan width is only available on UP interfaces */
 		ifctrl_iwget_interface_info(conf.ifname);
+        DEBUG("conf.ifname11: %s\n", conf.ifname);
 
 		mon = open_packet_socket(conf.ifname, conf.recv_buffer_size);
 		if (mon <= 0)
 			err(1, "Couldn't open packet socket");
+        DEBUG("open: %s recv size: %d\n", conf.ifname, conf.recv_buffer_size);
 		conf.arphrd = device_get_hwinfo(mon, conf.ifname,
 						conf.my_mac_addr);
 
@@ -693,8 +703,9 @@ int main(int argc, char** argv)
 			err(1, "failed to change the initial channel number");
 	}
 
-	printf("Max PHY rate: %d Mbps\n", conf.max_phy_rate/10);
+	DEBUG("Max PHY rate: %d Mbps\n", conf.max_phy_rate/10);
 
+    // 在不加debug情况下，使用ncurses库显示
 	if (!conf.quiet && !conf.debug)
 		init_display();
 
@@ -715,7 +726,9 @@ int main(int argc, char** argv)
 
 	while (!conf.do_change_channel || conf.channel_scan_rounds != 0)
 	{
+	    DEBUG("--------------before receive_any.\n");
 		receive_any(&waitmask);
+        DEBUG("--------------end receive_any.\n");
 
 		if (is_sigint_caught)
 			exit(1);
@@ -724,7 +737,9 @@ int main(int argc, char** argv)
 		node_timeout();
 
 		if (conf.serveraddr[0] == '\0') { /* server */
+            DEBUG("--------------serveraddr: %d.\n", conf.paused);
 			if (!conf.paused && channel_auto_change()) {
+                DEBUG("--------------channel_auto_change.\n");
 				net_send_channel_config();
 				update_spectrum_durations();
 				if (!conf.quiet && !conf.debug)

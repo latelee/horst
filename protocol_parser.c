@@ -44,6 +44,7 @@ static int parse_meshcruzer_packet(unsigned char* buf, size_t len, struct packet
 bool parse_packet(unsigned char* buf, size_t len, struct packet_info* p)
 {
 	int ret = wlan_parse_packet(buf, len, p);
+    DEBUG("-------------end of parse packet---------\n");
 	if (ret == 0)
 		return true;
 	else if (ret < 0)

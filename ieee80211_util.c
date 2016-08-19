@@ -74,6 +74,8 @@ int ieee80211_frame_duration(int phymode, size_t len, int rate, int short_preamb
 
 	erp = ieee80211_is_erp_rate(phymode, rate);
 
+    DEBUG("Handle Duration of frame.\n");
+
 	/* calculate duration (in microseconds, rounded up to next higher
 	 * integer if it includes a fractional microsecond) to send frame of
 	 * len bytes (does not include FCS) at the given rate. Duration will
@@ -83,7 +85,7 @@ int ieee80211_frame_duration(int phymode, size_t len, int rate, int short_preamb
 	 * DIV_ROUND_UP() operations.
 	 */
 
-	DEBUG("DUR mode %d, len %d, rate %d, shortpre %d shortslot %d type %x UP %d\n", phymode, (int)len, rate, short_preamble, shortslot, type, qos_class);
+	DEBUG("DURATION mode %d, len %d, rate %d, shortpre %d shortslot %d type %x UP %d\n", phymode, (int)len, rate, short_preamble, shortslot, type, qos_class);
 
 	if (phymode == PHY_FLAG_A || erp) {
 		DEBUG("OFDM\n");
@@ -160,7 +162,7 @@ int ieee80211_frame_duration(int phymode, size_t len, int rate, int short_preamb
 
 	/* TODO: Add EIFS (SIFS + ACKTXTIME) to frames with CRC errors, if we can get them */
 
-	DEBUG("DUR %d\n", dur);
+	DEBUG("DUR: %d  end.\n", dur);
 	return dur;
 }
 

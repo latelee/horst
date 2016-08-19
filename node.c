@@ -28,6 +28,7 @@
 
 static struct timespec last_nodetimeout;
 
+// 转换，最终使用的是node_info结构体
 static void copy_nodeinfo(struct node_info* n, struct packet_info* p)
 {
 	struct node_info* ap;

@@ -208,6 +208,7 @@ static void get_radiotap_info(struct ieee80211_radiotap_iterator *iter, struct p
 /* return consumed length, 0 for bad FCS, -1 on error */
 static int parse_radiotap_header(unsigned char* buf, size_t len, struct packet_info* p)
 {
+    DEBUG("----------radiotap HEADER parse.......\n");
 	struct ieee80211_radiotap_header* rh;
 	struct ieee80211_radiotap_iterator iter;
 	int err, rt_len;
@@ -264,7 +265,7 @@ static void wlan_parse_information_elements(unsigned char* buf, size_t bufLen, s
 	int len = bufLen;
 	while (len > 2) {
 		struct information_element* ie = (struct information_element*)buf;
-		DEBUG("------ IE %d len %d t len %d\n", ie->id, ie->len, len);
+		//DEBUG("------ IE %d len %d t len %d\n", ie->id, ie->len, len);
 
 		switch (ie->id) {
 		case WLAN_IE_ID_SSID:
@@ -357,11 +358,15 @@ static int parse_80211_header(unsigned char* buf, size_t len, struct packet_info
 
 	wh = (struct wlan_frame*)buf;
 
+    // 输出帧类型
 	fc = le16toh(wh->fc);
 	p->wlan_type = (fc & WLAN_FRAME_FC_MASK);
-	DEBUG("wlan_type %x - type %x - stype %x\n", fc, fc & WLAN_FRAME_FC_TYPE_MASK, fc & WLAN_FRAME_FC_STYPE_MASK);
-	DEBUG("%s\n", get_packet_type_name(fc));
+    int type = (fc & WLAN_FRAME_FC_TYPE_MASK)>>2;
+    int stype = (fc & WLAN_FRAME_FC_STYPE_MASK)>>4;
+	DEBUG("wlan_type %x - type %x - stype %x ", fc, type, stype);
+	DEBUG("[%s]\n", get_packet_type_name(fc));
 
+    // 数据帧
 	if (WLAN_FRAME_IS_DATA(fc)) {
 
 		hdrlen = 24;
@@ -371,6 +376,7 @@ static int parse_80211_header(unsigned char* buf, size_t len, struct packet_info
 				hdrlen += 4;
 		}
 
+        // 根据DS标志来确定模式是什么
 		/* AP, STA or IBSS */
 		if ((fc & WLAN_FRAME_FC_FROM_DS) == 0 &&
 		    (fc & WLAN_FRAME_FC_TO_DS) == 0) {
@@ -421,7 +427,7 @@ static int parse_80211_header(unsigned char* buf, size_t len, struct packet_info
 		if (fc & WLAN_FRAME_FC_RETRY)
 			p->wlan_retry = 1;
 
-	} else if (WLAN_FRAME_IS_CTRL(fc)) {
+	} else if (WLAN_FRAME_IS_CTRL(fc)) {// 控制帧
 		if (p->wlan_type == WLAN_FRAME_CTS ||
 		    p->wlan_type == WLAN_FRAME_ACK)
 			hdrlen = 10;
@@ -431,8 +437,8 @@ static int parse_80211_header(unsigned char* buf, size_t len, struct packet_info
 		if (len < hdrlen)
 			return -1;
 
-	} else if (WLAN_FRAME_IS_MGMT(fc)) {
-		hdrlen = 24;
+	} else if (WLAN_FRAME_IS_MGMT(fc)) { // 管理帧
+		hdrlen = 24; // 至少24，根据类型不同而变化
 		if (fc & WLAN_FRAME_FC_ORDER)
 			hdrlen += 4;
 
@@ -443,7 +449,7 @@ static int parse_80211_header(unsigned char* buf, size_t len, struct packet_info
 		ta = wh->addr2;
 		bssid = wh->addr3;
 		p->wlan_seqno = (le16toh(wh->seq) & WLAN_FRAME_SEQ_MASK) >> 4;
-		DEBUG("MGMT SEQ %d\n", p->wlan_seqno);
+		DEBUG("MGMT SEQ NUM: %d\n", p->wlan_seqno);
 
 		if (fc & WLAN_FRAME_FC_RETRY)
 			p->wlan_retry = 1;
@@ -512,8 +518,8 @@ static int parse_80211_header(unsigned char* buf, size_t len, struct packet_info
 
 			wlan_parse_information_elements(bc->ie,
 				len - hdrlen - sizeof(struct wlan_frame_beacon) - 4 /* FCS */, p);
-			DEBUG("ESSID %s \n", p->wlan_essid );
-			DEBUG("CHAN %d \n", p->wlan_channel );
+			DEBUG("ESSID: %s \n", p->wlan_essid );
+			DEBUG("CHAN: %d \n", p->wlan_channel );
 			cap_i = le16toh(bc->capab);
 			if (cap_i & WLAN_CAPAB_IBSS)
 				p->wlan_mode = WLAN_MODE_IBSS;
@@ -549,15 +555,15 @@ static int parse_80211_header(unsigned char* buf, size_t len, struct packet_info
 
 	if (ta != NULL) {
 		memcpy(p->wlan_src, ta, MAC_LEN);
-		DEBUG("TA    %s\n", ether_sprintf(ta));
+		DEBUG("SRC MAC:    %s\n", ether_sprintf(ta));
 	}
 	if (ra != NULL) {
 		memcpy(p->wlan_dst, ra, MAC_LEN);
-		DEBUG("RA    %s\n", ether_sprintf(ra));
+		DEBUG("DST MAC:    %s\n", ether_sprintf(ra));
 	}
 	if (bssid != NULL) {
 		memcpy(p->wlan_bssid, bssid, MAC_LEN);
-		DEBUG("BSSID %s\n", ether_sprintf(bssid));
+		DEBUG("BSSID MAC: %s\n", ether_sprintf(bssid));
 	}
 
 	/* only data frames contain more info, otherwise stop parsing */

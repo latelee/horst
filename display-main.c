@@ -228,6 +228,7 @@ static void update_status_win(struct packet_info* p)
 
 static char spin[4] = {'/', '-', '\\', '|'};
 
+// 打印最顶上的窗口信息，如信号强度、信道、MAC地址
 static void print_node_list_line(int line, struct node_info* n)
 {
 	char* ssid = NULL;
@@ -251,16 +252,18 @@ static void print_node_list_line(int line, struct node_info* n)
 	if (n->wlan_channel)
 		mvwprintw(list_win, line, COL_CHAN, "%3d", n->wlan_channel );
 
-	mvwprintw(list_win, line, COL_SIG, "%3d", -ewma_read(&n->phy_sig_avg));
-	mvwprintw(list_win, line, COL_RATE, "%3d", n->last_pkt.phy_rate/10);
-	mvwprintw(list_win, line, COL_SOURCE, "%-17s", mac_name_lookup(n->wlan_src, 0));
+	mvwprintw(list_win, line, COL_SIG, "%3d", -ewma_read(&n->phy_sig_avg)); // 信号强度
+	mvwprintw(list_win, line, COL_RATE, "%3d", n->last_pkt.phy_rate/10); // 速率索引?
+	mvwprintw(list_win, line, COL_SOURCE, "%-17s", mac_name_lookup(n->wlan_src, 0)); // mac地址
 
+    // 模式、频宽
 	mvwprintw(list_win, line, COL_WIDTH, "%-2s %-3s",
 		get_80211std(n->wlan_chan_width, n->wlan_channel),
 		(n->wlan_chan_width == CHAN_WIDTH_UNSPEC ||
 		 n->wlan_chan_width == CHAN_WIDTH_20_NOHT) ? "20" :
 		channel_width_string_short(n->wlan_chan_width, n->wlan_ht40plus));
 
+    // 空间流
 	if (n->wlan_rx_streams)
 		wprintw(list_win, " %dx%d", n->wlan_tx_streams, n->wlan_rx_streams);
 

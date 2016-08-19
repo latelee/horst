@@ -198,6 +198,7 @@ bool channel_auto_change(void)
 	bool ret = true;
 	int start_idx;
 
+DEBUG("channel_idx: %d\n", conf.channel_idx);
 	if (conf.channel_idx == -1)
 		return false; /* The current channel is still unknown for some
 			   * reason (mac80211 bug, busy physical interface,
@@ -212,8 +213,10 @@ bool channel_auto_change(void)
 			   * channels as long as the channel module is not
 			   * initialized properly. */
 
-	if (channel_get_remaining_dwell_time() > 0)
-		return false; /* too early */
+	if (channel_get_remaining_dwell_time() > 0) {
+        DEBUG("channel_get_remaining_dwell_time>0--------\n");
+        return false; /* too early */
+    }
 
 	if (conf.do_change_channel) {
 		start_idx = new_idx = conf.channel_idx;
