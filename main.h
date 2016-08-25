@@ -36,11 +36,21 @@
 #define DO_DEBUG 0
 #endif
 
+#define LL_DEBUG 1
+
+
 #if DO_DEBUG
-#define DEBUG(...) do { if (conf.debug) printf(__VA_ARGS__); } while (0)
+#define DEBUG(...) do { if (conf.debug && 0) printf(__VA_ARGS__); } while (0)
 #else
 #define DEBUG(...)
 #endif
+
+#if DO_DEBUG
+#define MY_DEBUG(...) do { if (conf.debug && LL_DEBUG) printf(__VA_ARGS__); } while (0)
+#else
+#define MY_DEBUG(...)
+#endif
+
 
 /* #include <net/if.h> conflicts with <linux/if.h> in ifctrl-wext and there does
  * not seem to be a better solution that to just define IF_NAMESIZE ourselves */

@@ -184,6 +184,7 @@ static void window_change_handler(__attribute__((unused)) int sig) {
 
 /******************* STATUS *******************/
 
+// 更新时间，最右下角
 static void update_clock(time_t* sec)
 {
 	static char buf[9];
@@ -194,6 +195,7 @@ static void update_clock(time_t* sec)
 	wnoutrefresh(stdscr);
 }
 
+// 通道及频宽
 static void update_mini_status(void)
 {
 	wattron(stdscr, BLACKONWHITE);
@@ -210,6 +212,7 @@ static void update_mini_status(void)
 	wnoutrefresh(stdscr);
 }
 
+// 显示底部菜单
 static void update_menu(void)
 {
 	wattron(stdscr, BLACKONWHITE);
@@ -316,6 +319,7 @@ void display_log(const char *string)
 	print_dump_win(string, show_win == NULL);
 }
 
+// 更新界面
 void update_display(struct packet_info* pkt)
 {
 	/*
@@ -326,7 +330,7 @@ void update_display(struct packet_info* pkt)
 	    the_time.tv_sec == last_time.tv_sec &&
 	    (the_time.tv_nsec - last_time.tv_nsec) / 1000 < conf.display_interval ) {
 		/* just add the line to dump win so we don't loose it */
-		update_dump_win(pkt);
+		update_dump_win(pkt); // 这里更新一次实时抓包
 		return;
 	}
 
@@ -359,6 +363,8 @@ void update_display(struct packet_info* pkt)
 
 /******************* INPUT *******************/
 
+int g_tmp_key = 0;
+
 void handle_user_input(void)
 {
 	int key;
@@ -386,6 +392,7 @@ void handle_user_input(void)
 			return;
 	}
 
+    g_tmp_key = key;
 	switch(key) {
 	case ' ': case 'p': case 'P':
 		main_pause(conf.paused = conf.paused ? 0 : 1);
@@ -463,7 +470,7 @@ void init_display(void)
 	update_menu();
 	update_display(NULL);
 
-	signal(SIGWINCH, window_change_handler);
+	signal(SIGWINCH, window_change_handler); // 窗口大小变更处理
 	conf.display_initialized = 1;
 }
 

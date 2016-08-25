@@ -258,12 +258,14 @@ enum chan_width chan_width_from_vht_capab(uint32_t vht)
 void ht_streams_from_mcs_set(unsigned char* mcs, unsigned char* rx, unsigned char* tx)
 {
 	int i;
+    // 遇到mcs为0时停止
 	for (i = 0; i < 4; i++) {
 		if (!mcs[i])
 			break;
 	}
-	*rx = i;
+	*rx = i; // rx 哪个字节停止就是多少?
 
+    // 参见Figure 8-251
 	bool tx_mcs_defined = mcs[12] & 0x01;
 	bool tx_rx_mcs_not_equal = !!(mcs[12] & 0x02);
 	char tx_max_streams = ((mcs[12] & 0x0c) >> 2) + 1;

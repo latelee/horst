@@ -260,6 +260,7 @@ static int parse_radiotap_header(unsigned char* buf, size_t len, struct packet_i
 	}
 }
 
+// 这个函数的解析，要仔细看标准才知道
 static void wlan_parse_information_elements(unsigned char* buf, size_t bufLen, struct packet_info *p)
 {
 	int len = bufLen;
@@ -267,6 +268,7 @@ static void wlan_parse_information_elements(unsigned char* buf, size_t bufLen, s
 		struct information_element* ie = (struct information_element*)buf;
 		//DEBUG("------ IE %d len %d t len %d\n", ie->id, ie->len, len);
 
+        // 根据ID来判断，比如SSID为0，可以抓包看probe帧数据
 		switch (ie->id) {
 		case WLAN_IE_ID_SSID:
 			if (ie->len < WLAN_MAX_SSID_LEN-1) {
@@ -288,11 +290,13 @@ static void wlan_parse_information_elements(unsigned char* buf, size_t bufLen, s
 
 		case WLAN_IE_ID_HT_CAPAB:
 			DEBUG("HT %d %x\n", ie->len, ie->var[0]);
+            // 第一个字节第2比特为0表示仅20MHz
 			if (ie->var[0] & WLAN_IE_HT_CAPAB_INFO_CHAN_WIDTH_40)
 				p->wlan_chan_width = CHAN_WIDTH_40;
 			else
 				p->wlan_chan_width = CHAN_WIDTH_20;
 
+            // 第三个字节开始的16个字节为MCS
 			if (ie->len >= 26) {
 				ht_streams_from_mcs_set(&ie->var[3], &p->wlan_rx_streams, &p->wlan_tx_streams);
 				DEBUG("STREAMS %dx%d\n", p->wlan_tx_streams, p->wlan_rx_streams);
@@ -508,9 +512,11 @@ static int parse_80211_header(unsigned char* buf, size_t len, struct packet_info
 			ta = wh->addr2;
 			break;
 
+        // beacon帧和probe回应帧
 		case WLAN_FRAME_BEACON:
 		case WLAN_FRAME_PROBE_RESP:
 			;
+            DEBUG("--------beacon/proberesp request START.\n");
 			struct wlan_frame_beacon* bc = (struct wlan_frame_beacon*)(buf + hdrlen);
 			p->wlan_tsf = le64toh(bc->tsf);
 			p->wlan_bintval = le16toh(bc->bintval);
@@ -527,12 +533,15 @@ static int parse_80211_header(unsigned char* buf, size_t len, struct packet_info
 				p->wlan_mode = WLAN_MODE_AP;
 			if (cap_i & WLAN_CAPAB_PRIVACY)
 				p->wlan_wep = 1;
+            DEBUG("--------beacon/proberesp request END.\n");
 			break;
-
+        // probe帧，表示为probe类型
 		case WLAN_FRAME_PROBE_REQ:
+            DEBUG("--------probe request START.\n");
 			wlan_parse_information_elements(buf + hdrlen,
-				len - hdrlen - 4 /* FCS */, p);
+				len - hdrlen - 4 /* FCS */, p); // 解析频宽、等信息
 			p->wlan_mode = WLAN_MODE_PROBE;
+            DEBUG("--------probe request END.\n");
 			break;
 
 		case WLAN_FRAME_ASSOC_REQ:

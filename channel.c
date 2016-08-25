@@ -285,6 +285,7 @@ bool channel_init(void)
 		if (!channel_change(ini_idx, conf.channel_set_width, conf.channel_set_ht40plus))
 			return false;
 	} else {
+	    // 不设置信道
 		if (conf.if_freq <= 0) {
 			/* this happens when we have not been able to change
 			 * the original interface to monitor mode and we added

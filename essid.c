@@ -109,6 +109,7 @@ void update_essids(struct packet_info* p, struct node_info* n)
 		}
 	}
 
+    // 新加到链表中
 	/* if not add new essid */
 	if (&e->list == &essids.list.n) {
 		DEBUG("SPLIT   essid not found, adding new\n");

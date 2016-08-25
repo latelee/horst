@@ -28,6 +28,8 @@
 
 static struct timespec last_nodetimeout;
 
+int g_total_node_num = 0;
+
 // 转换，最终使用的是node_info结构体
 static void copy_nodeinfo(struct node_info* n, struct packet_info* p)
 {
@@ -140,6 +142,7 @@ struct node_info* node_update(struct packet_info* p)
 	    p->wlan_src[4] == 0 && p->wlan_src[5] == 0)
 		return NULL;
 
+    // 根据mac地址做匹配，如相同，则认为已经存在了
 	/* find node by wlan source address */
 	list_for_each(&nodes, n, list) {
 		if (memcmp(p->wlan_src, n->wlan_src, MAC_LEN) == 0) {
@@ -148,6 +151,7 @@ struct node_info* node_update(struct packet_info* p)
 		}
 	}
 
+    // 创建node，并添加到nodes全局链表
 	/* not found */
 	if (&n->list == &nodes.n) {
 		DEBUG("node adding\n");
@@ -157,8 +161,10 @@ struct node_info* node_update(struct packet_info* p)
 		ewma_init(&n->phy_sig_avg, 1024, 8);
 		list_head_init(&n->on_channels);
 		list_add_tail(&nodes, &n->list);
+        g_total_node_num++;
 	}
 
+    // 更新数据
 	copy_nodeinfo(n, p);
 
 	return n;
@@ -191,6 +197,7 @@ void node_timeout(void)
 				}
 			}
 			free(n);
+            g_total_node_num--;
 		}
 	}
 	last_nodetimeout = the_time;

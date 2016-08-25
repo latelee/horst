@@ -153,6 +153,7 @@ static void show_sort_win(void)
 #define STAT_WIDTH 11
 #define STAT_START 4
 
+// 实时状态
 static void update_status_win(struct packet_info* p)
 {
 	int sig, siga, bps, dps, pps, rps, bpsn, usen;
@@ -215,7 +216,9 @@ static void update_status_win(struct packet_info* p)
 	wnoutrefresh(stat_win);
 }
 
-#define COL_PKT		3
+#define COL_NO      1
+#define COL_SPIN    COL_NO+3
+#define COL_PKT		COL_SPIN+3
 #define COL_CHAN	COL_PKT + 7
 #define COL_SIG		COL_CHAN + 4
 #define COL_RATE	COL_SIG + 4
@@ -224,12 +227,15 @@ static void update_status_win(struct packet_info* p)
 #define COL_WIDTH	COL_MODE + 6
 #define COL_ENC		COL_WIDTH + 11
 #define COL_ESSID	COL_ENC + 6
-#define COL_INFO	COL_ESSID + 13
+#define COL_TIME    COL_ESSID + 16
+#define COL_INFO	COL_TIME + 9
 
+
+// 这几个字符表示什么意思?
 static char spin[4] = {'/', '-', '\\', '|'};
 
 // 打印最顶上的窗口信息，如信号强度、信道、MAC地址
-static void print_node_list_line(int line, struct node_info* n)
+static void print_node_list_line(int num, int line, struct node_info* n)
 {
 	char* ssid = NULL;
 
@@ -243,14 +249,15 @@ static void print_node_list_line(int line, struct node_info* n)
 	if (n->essid != NULL && n->essid->split > 0)
 		wattron(list_win, RED);
 
-	mvwprintw(list_win, line, 1, "%c", spin[n->pkt_count % 4]);
+    mvwprintw(list_win, line, COL_NO, "%2d ", num);
+	mvwprintw(list_win, line, COL_SPIN, "%c", spin[n->pkt_count % 4]); // ?? 这个表示什么意思?
 
 	mvwprintw(list_win, line, COL_PKT, "%.0f/%.0f%%",
 		  n->pkt_count * 100.0 / stats.packets,
 		  n->wlan_retries_all * 100.0 / n->pkt_count);
 
 	if (n->wlan_channel)
-		mvwprintw(list_win, line, COL_CHAN, "%3d", n->wlan_channel );
+		mvwprintw(list_win, line, COL_CHAN, "%3d", n->wlan_channel ); // 信道
 
 	mvwprintw(list_win, line, COL_SIG, "%3d", -ewma_read(&n->phy_sig_avg)); // 信号强度
 	mvwprintw(list_win, line, COL_RATE, "%3d", n->last_pkt.phy_rate/10); // 速率索引?
@@ -268,6 +275,8 @@ static void print_node_list_line(int line, struct node_info* n)
 		wprintw(list_win, " %dx%d", n->wlan_tx_streams, n->wlan_rx_streams);
 
 	wmove(list_win, line, COL_MODE-1);
+
+    // 类型
 	if (n->wlan_mode & WLAN_MODE_AP) {
 		wprintw(list_win, " AP");
 		if (n->essid != NULL)
@@ -303,6 +312,10 @@ static void print_node_list_line(int line, struct node_info* n)
 	if (ssid != NULL)
 		mvwprintw(list_win, line, COL_ESSID, "%s ", ssid);
 
+    char buf[9] = {0};
+    strftime(buf, 9, "%H:%M:%S", localtime(&n->last_seen));
+    mvwprintw(list_win, line, COL_TIME, "%s", buf);
+
 	if (ssid == NULL || strlen(ssid) < 12)
 		wmove(list_win, line, COL_INFO);
 
@@ -323,14 +336,12 @@ static void print_node_list_line(int line, struct node_info* n)
 	wattroff(list_win, RED);
 }
 
-static void update_node_list_win(void)
+static void init_list_win()
 {
-	struct node_info* n;
-	int line = 0;
-
 	werase(list_win);
 	wattron(list_win, WHITE);
 	box(list_win, 0 , 0);
+    mvwprintw(list_win, 0, 1, "No");
 	mvwprintw(list_win, 0, COL_PKT, "Pk/Re%%");
 	mvwprintw(list_win, 0, COL_CHAN, "Cha");
 	mvwprintw(list_win, 0, COL_SIG, "Sig");
@@ -340,6 +351,7 @@ static void update_node_list_win(void)
 	mvwprintw(list_win, 0, COL_WIDTH, "ST-MHz-TxR");
 	mvwprintw(list_win, 0, COL_ENC, "ENCR");
 	mvwprintw(list_win, 0, COL_ESSID, "ESSID");
+    mvwprintw(list_win, 0, COL_TIME, "TIME");
 	mvwprintw(list_win, 0, COL_INFO, "INFO");
 
 	/* reuse bottom line for information on other win */
@@ -348,18 +360,63 @@ static void update_node_list_win(void)
 	mvwprintw(list_win, win_split - 1, 30, "(BSSID)");
 	mvwprintw(list_win, win_split - 1, 50, "TYPE");
 	mvwprintw(list_win, win_split - 1, 57, "INFO");
-	mvwprintw(list_win, win_split - 1, COLS-10, "LiveStatus");
+	mvwprintw(list_win, win_split - 1, COLS-10, "LiveStatus");    
+}
+
+extern int g_tmp_key;
+extern int g_total_node_num;
+
+static void update_node_list_win(void)
+{
+	struct node_info* n;
+	int line = 0;
+    int total_num = 0;
+    int page_num = 0;
+    
+    init_list_win();
 
 	if (sortfunc)
 		listsort(&nodes.n, sortfunc);
 
+    page_num = win_split - 2;
+
+    // 遍历nodes列表
 	list_for_each(&nodes, n, list) {
+	
+	    // 根据用户过滤条件过滤
 		if (conf.filter_mode != 0 && (n->wlan_mode & conf.filter_mode) == 0)
 			continue;
+
 		line++;
-		if (line >= win_split - 1)
-			break; /* prevent overdraw of last line */
-		print_node_list_line(line, n);
+        total_num++;
+
+        // tmp　显示总数
+        mvwprintw(list_win, win_split - 2, 1, "line: %d total: %d", line, g_total_node_num);
+
+        // org
+        #if 0
+        // 当界面行数达到条件时，则不会再显示，只会更新之前已经显示了的节点信息
+        if (line >= page_num) {
+            break; /* prevent overdraw of last line */
+        }
+        print_node_list_line(total_num, line, n);
+        #endif
+        #if 01
+        if (line < page_num)
+        {
+            print_node_list_line(total_num, line, n);
+        }
+        else
+        {
+            if (g_tmp_key == KEY_RIGHT)
+            {
+                line = 1;
+                init_list_win();
+                print_node_list_line(total_num, line, n);
+                mvwprintw(list_win, win_split - 2, 1, "line: %d total: %d", line, g_total_node_num);
+            }
+        }
+        #endif
 	}
 
 	if (essids.split_active > 0) {
@@ -374,6 +431,7 @@ static void update_node_list_win(void)
 	wnoutrefresh(list_win);
 }
 
+// 显示当前实时抓到的帧
 void update_dump_win(struct packet_info* p)
 {
 	if (!p) {
@@ -396,6 +454,7 @@ void update_dump_win(struct packet_info* p)
 	wprintw(dump_win, "%-17s ", mac_name_lookup(p->wlan_src, 0));
 	wprintw(dump_win, "(%s) ", ether_sprintf(p->wlan_bssid));
 
+    // 有问题的帧直接返回
 	if (p->phy_flags & PHY_FLAG_BADFCS) {
 		wprintw(dump_win, "*BADFCS* ");
 		return;
@@ -456,6 +515,7 @@ void update_dump_win(struct packet_info* p)
 	else if (p->pkt_types & PKT_TYPE_ARP) {
 		wprintw(dump_win, "%-7s", "ARP", ip_sprintf(p->ip_src));
 	}
+    // 一般情况下进入此判断语句
 	else {
 		wprintw(dump_win, "%-7s", get_packet_type_name(p->wlan_type));
 
@@ -480,7 +540,7 @@ void update_dump_win(struct packet_info* p)
 			break;
 		case WLAN_FRAME_BEACON:
 		case WLAN_FRAME_PROBE_RESP:
-			wprintw(dump_win, "'%s' %llx", p->wlan_essid,
+			wprintw(dump_win, "'%s' %llx", p->wlan_essid, // essid类型
 				p->wlan_tsf);
 			break;
 		case WLAN_FRAME_PROBE_REQ:
@@ -495,10 +555,11 @@ void update_dump_win(struct packet_info* p)
 	wattroff(dump_win, A_BOLD);
 }
 
+// 显示整个界面
 void update_main_win(struct packet_info *p)
 {
-	update_node_list_win();
-	update_status_win(p);
+	update_node_list_win(); // 负责界面标题、上部信息
+	update_status_win(p); // 右下方实时状态
 	update_dump_win(p);
 	wnoutrefresh(dump_win);
 	if (sort_win != NULL) {
@@ -522,7 +583,9 @@ bool main_input(int key)
 
 void init_display_main(void)
 {
-	win_split = LINES / 2 + 1;
+//	win_split = LINES / 2 + 1; // 窗口分隔
+    win_split = LINES / 4 * 3;
+
 	stat_height = LINES - win_split - 1;
 
 	list_win = newwin(win_split, COLS, 0, 0);
@@ -540,7 +603,8 @@ void init_display_main(void)
 
 void resize_display_main(void)
 {
-	win_split = LINES / 2 + 1;
+	//win_split = LINES / 2 + 1;
+	win_split = LINES / 4 * 3; // new
 	stat_height = LINES - win_split - 1;
 	wresize(list_win, win_split, COLS);
 	wresize(dump_win, stat_height, COLS - STAT_WIDTH);

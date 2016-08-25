@@ -321,6 +321,67 @@ static void fixup_packet_channel(struct packet_info* p)
 		conf.channel_idx = p->pkt_chan_idx;
 }
 
+// my debug....
+static void update_node_list(void)
+{
+	struct node_info* n;
+	int line = 0;
+    char* ssid = NULL;
+
+    // 遍历nodes列表
+	list_for_each(&nodes, n, list) {
+	ssid = NULL;
+		if (conf.filter_mode != 0 && (n->wlan_mode & conf.filter_mode) == 0)
+			continue;
+		line++;
+
+		MY_DEBUG("No.%-2d ", line);
+		if (n->wlan_mode & WLAN_MODE_AP) {
+            MY_DEBUG("AP "); 
+            ssid = n->essid->essid;
+        }
+		if (n->wlan_mode & WLAN_MODE_STA){  
+            MY_DEBUG("STA ");
+            if (n->wlan_ap_node != NULL && n->wlan_ap_node->essid != NULL)
+                        ssid = n->wlan_ap_node->essid->essid;
+
+        }
+        if (n->wlan_mode & WLAN_MODE_PROBE) {      
+            MY_DEBUG("Probe ");
+            ssid = n->last_pkt.wlan_essid;
+            }
+        MY_DEBUG("CH: %d %-17s ", n->wlan_channel, mac_name_lookup(n->wlan_src, 0));
+        if (0) //(ssid != NULL)
+        {
+            int i = 0;
+            int dumphex = 0;
+            int len = strlen(ssid);
+            for (i = 0; i < len; i++)
+            {
+                if (ssid[i] < 32 || ssid[i] > 127)
+                {
+                    dumphex = 1;
+                    break;
+                }
+            }
+            if (dumphex)
+            {
+                for (i = 0; i < len; i++)
+                {
+                    MY_DEBUG("%02x ", ssid[i]);
+                }
+            }
+            else
+            {
+                MY_DEBUG("%s", ssid);
+            }
+        }
+        MY_DEBUG("\n");
+        
+	}
+}
+
+
 void handle_packet(struct packet_info* p)
 {
 	struct node_info* n = NULL;
@@ -361,10 +422,17 @@ void handle_packet(struct packet_info* p)
 				p->wlan_retries);
 	}
 
+    // 更新信息
 	update_history(p);
 	update_statistics(p);
 	update_spectrum(p, n);
+    // 更新essid(好像就是ap信息)
 	update_essids(p, n);
+
+    // my debug here
+    //MY_DEBUG("======================\n");
+    //update_node_list();
+    // debug end
 
 	if (!conf.quiet && !conf.debug)
 		update_display(p);
@@ -381,7 +449,7 @@ static void local_receive_packet(int fd, unsigned char* buffer, size_t bufsize)
 
 #if DO_DEBUG
 	if (conf.debug) {
-		dump_packet(buffer, len);
+		//dump_packet(buffer, len);
 		DEBUG("\n");
 	}
 #endif
@@ -637,8 +705,8 @@ int main(int argc, char** argv)
 
 	atexit(exit_handler);
 
-	clock_gettime(CLOCK_MONOTONIC, &stats.stats_time);
-	clock_gettime(CLOCK_MONOTONIC, &the_time);
+	clock_gettime(CLOCK_REALTIME, &stats.stats_time);
+	clock_gettime(CLOCK_REALTIME, &the_time);
 
 	conf.channel_idx = -1;
 
@@ -653,7 +721,7 @@ int main(int argc, char** argv)
 	if (conf.serveraddr[0] != '\0')
 		mon = net_open_client_socket(conf.serveraddr, conf.port);
 	else {
-
+        // 初始化80211
 		ifctrl_init();
 		ifctrl_iwget_interface_info(conf.ifname);
 
@@ -733,8 +801,21 @@ int main(int argc, char** argv)
 		if (is_sigint_caught)
 			exit(1);
 
-		clock_gettime(CLOCK_MONOTONIC, &the_time);
-		node_timeout();
+        //　网上说CLOCK_MONOTONIC 表示系统启动时间   
+		clock_gettime(CLOCK_REALTIME, &the_time); // 更新the_time   CLOCK_REALTIME
+
+        #if 0
+        MY_DEBUG("the_time: %ld %ld ", the_time.tv_sec, the_time.tv_nsec);
+        char buf[20] = {0};
+        strftime(buf, 20, "%H:%M:%S", localtime(&the_time.tv_sec));
+        MY_DEBUG("%s \n", buf);
+        time_t now = time(NULL);
+        MY_DEBUG("now time: %ld ", now);
+        strftime(buf, 20, "%H:%M:%S", localtime(&now));
+        MY_DEBUG("%s \n", buf);
+        #endif
+
+		node_timeout(); // 如果超时，则删除链表中对应的节点
 
 		if (conf.serveraddr[0] == '\0') { /* server */
             DEBUG("--------------serveraddr: %d.\n", conf.paused);
@@ -772,7 +853,7 @@ void main_reset(void)
 	memset(&stats, 0, sizeof(stats));
 	memset(&spectrum, 0, sizeof(spectrum));
 	init_spectrum();
-	clock_gettime(CLOCK_MONOTONIC, &stats.stats_time);
+	clock_gettime(CLOCK_REALTIME, &stats.stats_time);
 }
 
 void dumpfile_open(const char* name)

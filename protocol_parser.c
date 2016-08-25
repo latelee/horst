@@ -50,6 +50,7 @@ bool parse_packet(unsigned char* buf, size_t len, struct packet_info* p)
 	else if (ret < 0)
 		return false;
 
+    // 直接返回，后面不解析
 	len -= ret; buf += ret;
 	ret = parse_llc(buf, len, p);
 	if (ret <= 0)

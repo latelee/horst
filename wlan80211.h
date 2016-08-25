@@ -168,11 +168,12 @@ struct wlan_frame_beacon {
 #define WLAN_CAPAB_DEL_BLKACK	0x4000
 #define WLAN_CAPAB_IMM_BLKACK	0x8000
 
+// 此结构体参见802.11标准8.4.2小节
 /*** information elements ***/
 struct information_element {
 	uint8_t		id;
 	uint8_t		len;
-	unsigned char	var[0];
+	unsigned char	var[0]; // GNU C语法
 };
 
 /* only the information element IDs we are interested in */
@@ -198,6 +199,6 @@ struct information_element {
 #define WLAN_IE_VHT_CAPAB_INFO_CHAN_WIDTH_160	1 /* 160MHz */
 #define WLAN_IE_VHT_CAPAB_INFO_CHAN_WIDTH_BOTH	2 /* 160MHz and 80+80 MHz */
 
-#define WLAN_MAX_SSID_LEN	34
+#define WLAN_MAX_SSID_LEN	34  // 标准规定最大长度为34，见8.4.2 Table 8-54
 
 #endif
