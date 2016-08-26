@@ -32,6 +32,7 @@ OBJS=						   \
 	control.o				   \
 	display-channel.o			   \
 	display-essid.o				   \
+	display-probe.o				   \
 	display-filter.o			   \
 	display-help.o				   \
 	display-history.o			   \

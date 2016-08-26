@@ -227,7 +227,8 @@ static void update_menu(void)
 	attron(KEYMARK); printw("a"); attroff(KEYMARK); printw("ts ");
 	attron(KEYMARK); printw("S"); attroff(KEYMARK); printw("pec ");
 	attron(KEYMARK); printw("F"); attroff(KEYMARK); printw("ilt ");
-	attron(KEYMARK); printw("C"); attroff(KEYMARK); printw("han ");
+	attron(KEYMARK); printw("C"); attroff(KEYMARK); printw("han Pro");
+	attron(KEYMARK); printw("b"); attroff(KEYMARK); printw(" ");
 	attron(KEYMARK); printw("?"); attroff(KEYMARK); printw(" ");
 	if (show_win == NULL) {
 		printw("s"); attron(KEYMARK); printw("O"); attroff(KEYMARK); printw("rt");
@@ -256,6 +257,8 @@ static void update_show_win(void)
 		update_statistics_win(show_win);
 	else if (show_win_current == 's')
 		update_spectrum_win(show_win);
+    else if (show_win_current == 'b')
+        update_probe_win(show_win);
 	else if (show_win_current == '?')
 		update_help_win(show_win);
 }
@@ -411,6 +414,7 @@ void handle_user_input(void)
 	case 'h': case 'H':
 	case 'a': case 'A':
 	case 's': case 'S':
+    case 'b': case 'B':
 		show_window(tolower(key));
 		break;
 

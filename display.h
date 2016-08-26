@@ -89,4 +89,6 @@ void update_history_win(WINDOW *win);
 void update_help_win(WINDOW *win);
 bool spectrum_input(WINDOW *win, int c);
 
+void update_probe_win(WINDOW *win);
+
 #endif
