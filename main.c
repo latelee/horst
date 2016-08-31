@@ -211,6 +211,8 @@ static void write_to_file(struct packet_info* p)
 {
 	char buf[40];
 	int i;
+	struct timespec the_time;
+	clock_gettime(CLOCK_REALTIME, &the_time);
 	struct tm* ltm = localtime(&the_time.tv_sec);
 
 	//timestamp, e.g. 2015-05-16 15:05:44.338806 +0300
@@ -705,8 +707,8 @@ int main(int argc, char** argv)
 
 	atexit(exit_handler);
 
-	clock_gettime(CLOCK_REALTIME, &stats.stats_time);
-	clock_gettime(CLOCK_REALTIME, &the_time);
+	clock_gettime(CLOCK_MONOTONIC, &stats.stats_time);
+	clock_gettime(CLOCK_MONOTONIC, &the_time);
 
 	conf.channel_idx = -1;
 
@@ -802,7 +804,7 @@ int main(int argc, char** argv)
 			exit(1);
 
         //　网上说CLOCK_MONOTONIC 表示系统启动时间   
-		clock_gettime(CLOCK_REALTIME, &the_time); // 更新the_time   CLOCK_REALTIME
+		clock_gettime(CLOCK_MONOTONIC, &the_time); // 更新the_time   CLOCK_REALTIME
 
         #if 0
         MY_DEBUG("the_time: %ld %ld ", the_time.tv_sec, the_time.tv_nsec);
@@ -853,7 +855,7 @@ void main_reset(void)
 	memset(&stats, 0, sizeof(stats));
 	memset(&spectrum, 0, sizeof(spectrum));
 	init_spectrum();
-	clock_gettime(CLOCK_REALTIME, &stats.stats_time);
+	clock_gettime(CLOCK_MONOTONIC, &stats.stats_time);
 }
 
 void dumpfile_open(const char* name)
