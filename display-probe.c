@@ -52,7 +52,7 @@ static void update_node_info(WINDOW *win, int num, int line, int col, struct nod
         wprintw(win, " %dx%d", n->wlan_tx_streams, n->wlan_rx_streams);
     
     char buf[9] = {0};
-    strftime(buf, 9, "%H:%M:%S", localtime(&n->last_seen));
+    strftime(buf, 9, "%H:%M:%S", localtime(&n->last_ts));
     mvwprintw(win, line, col*COL_TWO + COL_TIME, "%s", buf);
 }
 

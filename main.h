@@ -173,6 +173,7 @@ struct node_info {
 	struct list_head	on_channels;	/* channels this node was seen on */
 	unsigned int		num_on_channels;
 	time_t			last_seen;	/* timestamp */
+    time_t          last_ts;
 
 	/* general packet info */
 	unsigned int		pkt_types;	/* bitmask of packet types we've seen */

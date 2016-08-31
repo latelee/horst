@@ -313,7 +313,7 @@ static void print_node_list_line(int num, int line, struct node_info* n)
 		mvwprintw(list_win, line, COL_ESSID, "%s ", ssid);
 
     char buf[9] = {0};
-    strftime(buf, 9, "%H:%M:%S", localtime(&n->last_seen));
+    strftime(buf, 9, "%H:%M:%S", localtime(&n->last_ts));
     mvwprintw(list_win, line, COL_TIME, "%s", buf);
 
 	if (ssid == NULL || strlen(ssid) < 12)

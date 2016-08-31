@@ -188,7 +188,11 @@ static void window_change_handler(__attribute__((unused)) int sig) {
 static void update_clock(time_t* sec)
 {
 	static char buf[9];
-	strftime(buf, 9, "%H:%M:%S", localtime(sec));
+    struct timespec the_time;
+	clock_gettime(CLOCK_REALTIME, &the_time);
+	struct tm* ltm = localtime(&the_time.tv_sec);
+    
+	strftime(buf, 9, "%H:%M:%S", ltm);
 	wattron(stdscr, BLACKONWHITE);
 	mvwprintw(stdscr, LINES-1, COLS-9, "|%s", buf);
 	wattroff(stdscr, BLACKONWHITE);
